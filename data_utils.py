@@ -58,22 +58,27 @@ class GDSC1Dataset(Dataset):
         return (drug_fingerprint, gene_expr), ic50
 
 
-def get_GDSC1_splits(batch_size=32, fingerprinting=smiles2morgan):
+def get_GDSC1_splits(frac = None, batch_size=32, fingerprinting=smiles2morgan):
     """
     :param batch_size: for the dataloader
     :param fingerprinting: mapping that converts smiles string to a feature vector
     :return: a dict containing dataloaders for train, test, and validation data.
     """
     data = DrugRes(name='GDSC1')
-    split = data.get_split()
+    if frac is None:
+        split = data.get_split()
+    else:
+        split = data.get_split(frac=frac)
     dataloaders = {}
-    for portion in ['train', 'test']:
+    for portion in ['train', 'test', 'valid']:
         df = split[portion]
         column_normalize(df, col_name='Cell Line')
         dataset = GDSC1Dataset(df, fingerprinting=fingerprinting)
+        # since we care about element-wise prediction result during validation phase
+        if portion == 'valid':
+            batch_size = 1
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         dataloaders[portion] = dataloader
-    dataloaders['test'] = split['test']
     return dataloaders
 
 def column_normalize(df, col_name='Cell Line'):
