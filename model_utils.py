@@ -36,7 +36,7 @@ def save_model_and_valid(model, dataloaders, prefix: str):
     torch.save(dataloaders['valid'], f'{prefix}_valid_dataloader.pth', pickle_module=dill)
 
 def load_model_and_valid(prefix: str):
-    return torch.load(f'{prefix}_model.pth'), torch.load(f'{prefix}_valid_data.pth')
+    return torch.load(f'{prefix}_model.pth'), torch.load(f'{prefix}_valid_dataloader.pth')
 
 class Model(Module):
     # def __init__(self, train_dataloader, test_dataloader):
@@ -75,8 +75,8 @@ class Model(Module):
 
         total_loss = 0
         for X, y in valid_dataset:
-            pred = self((self.f(X)).float())
-            target = self.g(X,y)
+            pred = self(X.float())
+            target = y
             total_loss = loss_fn(pred, target)
 
         if criterion == 'RMSE':
