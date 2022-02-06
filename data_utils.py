@@ -35,11 +35,14 @@ def test_smiles2morgan():
 
 
 class GDSC1Dataset(Dataset):
-    def __init__(self, df, fingerprinting=None, transform=None, target_transform=None):
+    def __init__(self, df, fingerprinting=None, transform=None, target_transform=None,
+                 total_transform=lambda x,y:(x,y), total_transform_2=lambda x,y,z:z):
         self.df = df
         self.fingerprinting = fingerprinting
         self.transform = transform
         self.target_transform = target_transform
+        self.total_transform = total_transform
+        self.total_transform_2 = total_transform_2
         pass
 
     def __len__(self):
@@ -55,10 +58,11 @@ class GDSC1Dataset(Dataset):
             gene_expr = self.transform(gene_expr)
         if self.target_transform:
             ic50 = self.target_transform(ic50)
-        return (drug_fingerprint, gene_expr), ic50
+        return self.total_transform(drug_fingerprint, gene_expr), \
+               self.total_transform_2(drug_fingerprint, gene_expr,ic50)
 
 
-def get_GDSC1_splits(frac = None, batch_size=32, fingerprinting=smiles2morgan):
+def get_GDSC1_splits(frac=None, batch_size=32, **kwargs):
     """
     :param batch_size: for the dataloader
     :param fingerprinting: mapping that converts smiles string to a feature vector
@@ -73,13 +77,14 @@ def get_GDSC1_splits(frac = None, batch_size=32, fingerprinting=smiles2morgan):
     for portion in ['train', 'test', 'valid']:
         df = split[portion]
         column_normalize(df, col_name='Cell Line')
-        dataset = GDSC1Dataset(df, fingerprinting=fingerprinting)
+        dataset = GDSC1Dataset(df, **kwargs)
         # since we care about element-wise prediction result during validation phase
         if portion == 'valid':
             batch_size = 1
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         dataloaders[portion] = dataloader
     return dataloaders
+
 
 def column_normalize(df, col_name='Cell Line'):
     """
@@ -96,8 +101,5 @@ def column_normalize(df, col_name='Cell Line'):
         return
     M = np.max(df[col_name].apply(np.max))
     m = np.min(df[col_name].apply(np.min))
-    df[col_name] = df[col_name].apply(lambda x: (x-m)/(M-m))
+    df[col_name] = df[col_name].apply(lambda x: (x - m) / (M - m))
 
-if __name__ == "__main__":
-    pass
-    # test_smiles2morgan()
